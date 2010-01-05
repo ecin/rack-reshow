@@ -11,21 +11,26 @@ module Rack
     end
     
     def call( env )
-      response = @app.call(env)
-      body = response.last
+      status, headers, body = @app.call(env)
       request = Request.new(env)
       if request.get?
         path = request.path
-        @store.transaction do |store|
-          store[path] ||= []
-          store[path] << body unless body.nil? or store[path].last.eql?(body)
+        if version = request.params['__reshow__']
+          body = @store.transaction do |store|
+            store[path][version.to_i-1]
+          end
+        else
+          @store.transaction do |store|
+            store[path] ||= []
+            store[path] << body unless body.nil? or store[path].last.eql?(body)
+          end
         end
       end
-      response
+      [status, headers, body]
     end
     
     def []( path )
-      @store.transaction(true) {|store| store[path]}
+      @store.transaction(true) {|store| store[path] || Array.new}
     end
     
     def purge!
