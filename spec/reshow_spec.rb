@@ -15,7 +15,8 @@ describe Rack::Reshow do
     @post_url = '/comments'
     @env = Rack::MockRequest.env_for '/'
     # The Lambdacat App
-    @body = "Lambda, lambda, lambda app, hoooo!"
+    @body = "<body>Lambda, lambda, lambda app, hoooo!</body>"
+    @body2 = "<body>Lambda app is on the run, lambda app is loose!</body>"
     @app = lambda {|env| [200, {}, @body]}
   end
 
@@ -46,29 +47,35 @@ describe Rack::Reshow do
     response = @middleware.call @env
     response.class.should be(Array) 
     response.size.should == 3
-    response[2] == @body
+    response[2] == @body.scan(/<body>(.*?)<\/body>/m).flatten.first
   end
 
   it 'should save a version of a page when the content changes' do
     @middleware.call @env
-    body = "Lambdacat is on the run, lambdacat is loose!"
-    @middleware.app = lambda {|env| [200, {}, body]}
+    @middleware.app = lambda {|env| [200, {}, @body2]}
     @middleware.call @env
     @middleware['/'].size.should == 2
     versions = @middleware['/']
-    versions[0].should eql("Lambda, lambda, lambda app, hoooo!")
-    versions[1].should eql("Lambdacat is on the run, lambdacat is loose!")
+    versions[0].should match("Lambda, lambda, lambda app, hoooo!")
+    versions[1].should match("Lambda app is on the run, lambda app is loose!")
   end
 
   it 'should allow to view previous versions of a page' do
     @middleware.call @env
-    body = "Lambdacat is on the run, lambdacat is loose!"
-    @middleware.app = lambda {|env| [200, {}, body]}
+    @middleware.app = lambda {|env| [200, {}, @body2]}
     @middleware.call @env
     status, headers, body = @middleware.call Rack::MockRequest.env_for('/', {:input => "__reshow__=1"})
-    body.should eql("Lambda, lambda, lambda app, hoooo!")
+    body.should match("Lambda, lambda, lambda app, hoooo!")
     status, headers, body = @middleware.call Rack::MockRequest.env_for('/', {:input => "__reshow__=2"})
-    body.should eql("Lambdacat is on the run, lambdacat is loose!")
+    body.should match("Lambda app is on the run, lambda app is loose!")
+  end
+
+  it 'should return all bodies in history (though hidden by css)' do
+    @middleware.call @env
+    @middleware.app = lambda {|env| [200, {}, @body2]}
+    status, headers, body = @middleware.call @env
+    body.should match(/Lambda app is on the run, lambda app is loose!/)
+    body.should match(/Lambda, lambda, lambda app, hoooo!/) 
   end
 
 end
