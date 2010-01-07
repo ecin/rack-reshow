@@ -5,7 +5,7 @@
   text-align: center;
   position: fixed;
   top: -25px;
-  left: 3%;
+  left: 50px;
   height: 25px;
   background: url(/__reshow__/border.png) white repeat-x bottom left;
   border-left: 1px solid #ccc;
@@ -23,6 +23,10 @@
   font-weight: bold;
   margin-right: 10px;
   color: steelblue;
+}
+
+#__reshow_info__{
+  opacity: 0.33;
 }
 
 #__reshow_next__{
