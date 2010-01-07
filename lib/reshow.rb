@@ -42,9 +42,10 @@ module Rack
             store[path] ||= []
             content = body.scan(/<body>(.*?)<\/body>/m).flatten.first
             store[path] << content unless content.nil? or store[path].last.eql?(content)
-            body.sub! /<body>.*<\/body>/m, "<body></body>"
+            body.sub! /<body>.*<\/body>/m, %q{<body><div id="__reshow_bodies__"></div></body>}
             store[path].each do |c|
-              insert_into_body body, tag(:div, c, :class => '__reshow_body__')
+              puts body
+              prepend_to_tag '<div id="__reshow_bodies__">', body, tag(:div, c, :class => '__reshow_body__')
             end
             insert_reshow_bar body, store[path].size
           end
@@ -65,19 +66,19 @@ module Rack
 
     private
 
-    def insert_into_body(page, string)
-      page.sub! /<\/body>/, string + "\n</body>"
+    def prepend_to_tag(tag, page, string)
+      page.sub! /#{tag}/, "#{tag}\n" + string
     end
-
-    def insert_into_head(page, string)
-      page.sub! /<\/head>/, string + "\n</head>"
+    
+    def append_to_tag(tag, page, string)
+      page.sub! /#{tag}/, string + "\n#{tag}"
     end
 
     def insert_reshow_bar(page, versions)
-      insert_into_head page, style
-      insert_into_head page, jquery
-      insert_into_head page, javascript
-      insert_into_body page, toolbar(versions)  
+      append_to_tag '</head>', page, style
+      append_to_tag '</head>', page, jquery
+      append_to_tag '</head>', page, javascript
+      append_to_tag '</body>', page, toolbar(versions)  
     end
 
     def tag(type, body, options={})
