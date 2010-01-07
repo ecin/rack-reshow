@@ -1,0 +1,30 @@
+#__reshow_bar__{
+  padding: 3px 15px 3px 15px;
+  margin: 0;
+  font-family: helvetica;
+  text-align: center;
+  position: fixed;
+  top: -25px;
+  left: 3%;
+  height: 25px;
+  background: url(/__reshow__/border.png) white repeat-x bottom left;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  z-index: 1024;
+}
+
+#__reshow_bar__ img{
+  cursor: pointer;
+  position: relative;
+  top: 3px;
+}
+
+.__reshow_body__{
+  opacity: 0;
+  display: none;
+}
+
+.__reshow_active__{
+  opacity: 1;
+  display: block;
+}
