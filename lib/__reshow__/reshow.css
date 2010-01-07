@@ -25,6 +25,10 @@
   color: steelblue;
 }
 
+#__reshow_next__{
+  opacity: 0.33;
+}
+
 .__reshow_body__{
   opacity: 0;
   display: none;
