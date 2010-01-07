@@ -60,16 +60,6 @@ describe Rack::Reshow do
     versions[1].should match("Lambda app is on the run, lambda app is loose!")
   end
 
-  it 'should allow to view previous versions of a page' do
-    @middleware.call @env
-    @middleware.app = lambda {|env| [200, {}, @body2]}
-    @middleware.call @env
-    status, headers, body = @middleware.call Rack::MockRequest.env_for('/', {:input => "__reshow__=1"})
-    body.to_s.should match("Lambda, lambda, lambda app, hoooo!")
-    status, headers, body = @middleware.call Rack::MockRequest.env_for('/', {:input => "__reshow__=2"})
-    body.to_s.should match("Lambda app is on the run, lambda app is loose!")
-  end
-
   it 'should return all bodies in history (though hidden by css)' do
     @middleware.call @env
     @middleware.app = lambda {|env| [200, {}, @body2]}

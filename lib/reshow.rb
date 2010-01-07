@@ -30,21 +30,16 @@ module Rack
     def call( env )
       status, headers, body = @app.call(env)
       request = Request.new(env)
-      if request.get?
+      if request.get? and status == 200
         path = request.path
-        if version = request.params['__reshow__']
-          body = @store.transaction(true) do |store|
-            store[path][version.to_i-1]
-          end
-        elsif body.respond_to? :join
+        if body.respond_to? :join
           body = body.join
           @store.transaction do |store|
             store[path] ||= []
             content = body.scan(/<body>(.*?)<\/body>/m).flatten.first
             store[path] << content unless content.nil? or store[path].last.eql?(content)
             body.sub! /<body>.*<\/body>/m, %q{<body><div id="__reshow_bodies__"></div></body>}
-            store[path].each do |c|
-              puts body
+            store[path].reverse.each do |c|
               prepend_to_tag '<div id="__reshow_bodies__">', body, tag(:div, c, :class => '__reshow_body__')
             end
             insert_reshow_bar body, store[path].size
