@@ -89,7 +89,7 @@ module Rack
       versions = (versions < 10 ? '0' : '') + versions.to_s
       <<-EOF
         <div id="__reshow_bar__">
-          <span id="__reshow_version__" style="font-weight: bold; margin-right: 10px; color: steelblue">#{versions}</span>
+          <span id="__reshow_version__">#{versions}</span>
           <span style="margin-right: 10px;">
             <img id="__reshow_prev__" src="/__reshow__/action_back.gif" style="margin-right: 7px;"/>
             <img id="__reshow_next__" src="/__reshow__/action_forward.gif" />

@@ -19,6 +19,12 @@
   top: 3px;
 }
 
+#__reshow_version__{
+  font-weight: bold;
+  margin-right: 10px;
+  color: steelblue;
+}
+
 .__reshow_body__{
   opacity: 0;
   display: none;
