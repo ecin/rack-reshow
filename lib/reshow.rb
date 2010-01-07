@@ -49,9 +49,10 @@ module Rack
             insert_reshow_bar body, store[path].size
           end
           headers['Content-Length'] = body.length.to_s
+          body = [body]
         end
       end
-      [status, headers, [body]]
+      [status, headers, body]
     end
     
     def []( path )
