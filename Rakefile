@@ -5,11 +5,12 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "rack-reshow"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Time machine for your views in the shape of a Rack middleware.}
+    #gem.description = %Q{TODO: longer description of your gem}
     gem.email = "ecin@copypastel.com"
     gem.homepage = "http://github.com/ecin/rack-reshow"
     gem.authors = ["ecin"]
+    gem.add_dependency "rack", ">= 1.0"
     gem.add_development_dependency "rspec", ">= 1.2.9"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end

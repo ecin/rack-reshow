@@ -1,0 +1,52 @@
+h1. rack-reshow
+
+h2. the little toolbar that could
+
+p. @Rack::Reshow@ adds a toolbar to rendered views that stores different versions of the page. Afterwards, reviewing and comparing outputted changes is a single click away.
+
+h2. use
+
+To install:
+
+@gem install rack-reshow@
+
+With Rails:
+
+bq. config.gem "rack-reshow", :lib => "rack/reshow"
+config.middleware.use "Rack::Reshow"
+
+In your rackup file:
+
+bq. require 'rack/reshow'
+use Rack::Reshow
+
+
+h2. why
+
+p. Development of a view is a trial and error process by far: change code, reload the browser, change to previous version, reload the browser, compare the two versions, repeat until satisfied.
+
+p. By storing the rendered views each time they change, @Rack::Reshow@ tightens the review loop, effectively creating a history for each page that can be clicked through.
+
+h2. how
+
+p. @Rack::Reshow@ uses @PStore@ to store different versions of a page.  
+
+p. Each time a request is received, @Rack::Reshow@ checks if the @<body>@ of the response differs from what it last was. If so, it adds it to the store. Afterwards, it injects all previous versions into the response, and makes them transversable via a small, elegant bar.
+
+h2. limitations
+
+p. @Rack::Reshow@ only works on responses that have a @<head>@ and @<body>@, namely the type of page one works with when dealing with a layout's look and feel.
+
+p. Furthermore, it works best when javascript is applied unobtrusively; if there's any javascript inside the response's @<body>@, it'll get called once for each time said javascript code appears in the page's history.
+
+p. Finally, the same page may have different content depending on session variables (i.e. after one logs in), or simply dynamic variables (i.e. displaying the date/time). @Rack::Reshow@ will store both versions separately, even though there's no code modification going on behind the scenes.
+
+h2. thanks
+
+p. "famfamfam":http://famfamfam.com for the elegant icons.
+"Rack::Bug":http://github.com/brynary/rack-bug for insight into how to serve static content and inject content into a response.
+"Jeweler":http://github.com/technicalpickles/jeweler for making publishing gems so simple.
+
+h2. copyright
+
+p. Copyright (c) 2010 copypastel. See LICENSE for details.
