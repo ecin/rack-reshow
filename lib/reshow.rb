@@ -86,6 +86,7 @@ module Rack
     end
 
     def toolbar(versions)
+      versions = (versions < 10 ? '0' : '') + versions.to_s
       <<-EOF
         <div id="__reshow_bar__">
           <span id="__reshow_version__" style="font-weight: bold; margin-right: 10px; color: steelblue">#{versions}</span>
