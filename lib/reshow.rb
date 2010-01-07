@@ -3,17 +3,33 @@ require 'rack/static'
 
 module Rack
   class Reshow
+
+    class RackStaticBugAvoider
+      def initialize(app, static_app)
+        @app = app
+        @static_app = static_app
+      end
+
+      def call(env)
+        if env["PATH_INFO"]
+          @static_app.call(env)
+        else
+          @app.call(env)
+        end
+      end
+    end
     
     @@store_file = 'reshow.ps'
     
     def initialize( app, opts = {} )
       root = Object::File.expand_path(Object::File.dirname(__FILE__))
-      @app = Rack::Static.new(app, :urls => ["/__reshow__"], :root => root)
+      @app = RackStaticBugAvoider.new(app, Rack::Static.new(app, :urls => ["/__reshow__"], :root => root))
       @store = PStore.new(@@store_file)
     end
     
     def call( env )
       status, headers, body = @app.call(env)
+      response = Rack::Response.new(body, status, headers)
       request = Request.new(env)
       if request.get?
         path = request.path
@@ -21,7 +37,8 @@ module Rack
           body = @store.transaction(true) do |store|
             store[path][version.to_i-1]
           end
-        elsif body.respond_to? :scan
+        elsif body.respond_to? :join
+          body = body.join
           @store.transaction do |store|
             store[path] ||= []
             content = body.scan(/<body>(.*?)<\/body>/m).flatten.first
@@ -33,9 +50,11 @@ module Rack
             body.sub! /<\/body>/, encapsulate(store[path].last, true) + '</body>'
           end
           insert_reshow(body)
+          response['Content-Length'] = body.size.to_s
+          response.body = [body]
         end
       end
-      [status, headers, body]
+      response.to_a
     end
     
     def []( path )
