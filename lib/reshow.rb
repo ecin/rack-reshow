@@ -29,7 +29,6 @@ module Rack
     
     def call( env )
       status, headers, body = @app.call(env)
-      response = Rack::Response.new(body, status, headers)
       request = Request.new(env)
       if request.get?
         path = request.path
@@ -39,22 +38,20 @@ module Rack
           end
         elsif body.respond_to? :join
           body = body.join
+          insert_reshow_bar(body)
           @store.transaction do |store|
             store[path] ||= []
             content = body.scan(/<body>(.*?)<\/body>/m).flatten.first
             store[path] << content unless content.nil? or store[path].last.eql?(content)
             body.sub! /<body>.*<\/body>/m, "<body></body>"
-            store[path][0..-2].each do |b|
-              body.sub! /<\/body>/, encapsulate(b) + '</body>'
+            store[path].each do |c|
+              insert_into_body body, tag(:div, c, :class => '__reshow_body__')
             end
-            body.sub! /<\/body>/, encapsulate(store[path].last, true) + '</body>'
           end
-          insert_reshow(body)
-          response['Content-Length'] = body.size.to_s
-          response.body = [body]
+          headers['Content-Length'] = body.length.to_s
         end
       end
-      response.to_a
+      [status, headers, [body]]
     end
     
     def []( path )
@@ -67,23 +64,28 @@ module Rack
 
     private
 
-    def encapsulate(body, active=false)
-      <<-EOF
-      <div class="__reshow_body__ #{'__reshow_active__' if active}">
-        #{body}
-      </div>
-      EOF
+    def insert_into_body(page, string)
+      page.sub! /<\/body>/, string + "\n</body>"
     end
 
-    def insert_reshow(body)
-      # Include the cute toolbar
-      body.sub! /<\/body>/, toolbar + '</body>' 
-      # Include the styling css
-      body.sub! /<\/head>/, style + '</head>'
-      # Include the jQuery library
-      body.sub! /<\/head>/, jquery + '</head>'
-      # Include the animation and interaction scripts
-      body.sub! /<\/head>/, javascript + '</head>'
+    def insert_into_head(page, string)
+      page.sub! /<\/head>/, string + "\n</head>"
+    end
+
+    def insert_reshow_bar(page)
+      insert_into_head page, style
+      insert_into_head page, jquery
+      insert_into_head page, javascript
+      insert_into_body page, toolbar  
+    end
+
+    def tag(type, body, options={})
+      options = options.map {|key, value| "#{key}=\"#{value}\""}.join(' ')
+      <<-EOF
+      <#{type} #{options}">
+        #{body}
+      </#{type}>
+      EOF
     end
 
     def toolbar
