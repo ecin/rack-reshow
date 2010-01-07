@@ -1,6 +1,4 @@
-require 'rack'
-
-require File.expand_path(File.dirname(__FILE__) + '/../lib/reshow.rb')
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 include Rack
 
