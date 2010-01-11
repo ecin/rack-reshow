@@ -1,8 +1,92 @@
 require 'pstore'
 require 'rack/static'
+require 'open-uri'
 
 module Rack
   class Reshow
+
+    class Page 
+      
+      class << self
+
+        def tag(type, content, options={})
+          options = options.map {|key, value| "#{key}=\"#{value}\""}.join(' ')
+          <<-EOF
+          <#{type} #{options}">
+            #{content}
+          </#{type}>
+          EOF
+        end
+        
+      end
+      
+      def initialize(html, path, app)
+        @html = html
+        @path = path
+        self.stylesheets!(app)
+      end
+      
+      def to_s
+        @html
+      end
+      
+      def head
+        @html.scan(/<head>(.*?)<\/head>/m).flatten.first
+      end
+      
+      def head=(content)
+        @html.sub! /<head>.*<\/head>/m, "<head>#{content}</head>"
+      end
+      
+      def body
+        @html.scan(/<body>(.*?)<\/body>/m).flatten.first
+      end
+      
+      def body=(content)
+        @html.sub! /<body>.*<\/body>/m, "<body>#{content}</body>"
+      end
+      
+      def stylesheets
+        @stylesheets.each_value.to_a.join
+      end
+      
+      def stylesheets!(app)
+        @stylesheets ||= begin
+          @stylesheets = {}
+          links = head.scan(/<link.*?rel=['|"]stylesheet['|"].*?>/)
+          links.each do |link|
+            href = link.scan(/href=['|"](.*?)['|"]/).flatten.first
+            if href[/https?:\/\//] 
+              @stylesheets[href] = open(href).read
+            else
+              href = @path + href unless href[0] == ?/
+              status, headers, body = app.call Rack::MockRequest.env_for(href)
+              sheet = ''
+              body.each {|part| sheet << part}
+              @stylesheets[href] = sheet
+            end
+          end
+          @stylesheets
+        end
+      end
+      
+      def length
+        @html.length
+      end
+      
+      def eql?(page)
+        body == page.body and stylesheets == page.stylesheets
+      end
+      
+      def prepend_to_tag(tag, string)
+        @html.sub! /#{tag}/, "#{tag}\n" + string
+      end
+
+      def append_to_tag(tag, string)
+        @html.sub! /#{tag}/, string + "\n#{tag}"
+      end
+      
+    end
 
     class RackStaticBugAvoider
       def initialize(app, static_app)
@@ -28,24 +112,48 @@ module Rack
     end
     
     def call( env )
-      status, headers, body = @app.call(env)
       request = Request.new(env)
+      if request.env["PATH_INFO"] =~ /__reshow__\/assets/
+        version = request.params['version'].to_i
+        stylesheets = ''
+        @store.transaction(true) do |store|
+          stylesheets = store[request.params['path']][version].stylesheets
+        end
+        return [200, {'Content-Length' => stylesheets.length.to_s, 'Content-Type' => 'text/css'}, [stylesheets]]
+      end
+      status, headers, body = @app.call(env)
       if request.get? and status == 200
         path = request.path
         if body.respond_to? :join
           body = body.join
+          page = Page.new body, path, @app
+          # Store response
           @store.transaction do |store|
             store[path] ||= []
-            content = body.scan(/<body>(.*?)<\/body>/m).flatten.first
-            store[path] << content unless content.nil? or store[path].last.eql?(content)
-            body.sub! /<body>.*<\/body>/m, %q{<body><div id="__reshow_bodies__"></div></body>}
-            store[path].reverse.each do |c|
-              prepend_to_tag '<div id="__reshow_bodies__">', body, tag(:div, c, :class => '__reshow_body__')
-            end
-            insert_reshow_bar body, store[path].size
+            store[path] << page unless body.nil? or store[path].last.eql?(page)
           end
-          headers['Content-Length'] = body.length.to_s
-          body = [body]
+          # Insert Reshow assets
+          page.append_to_tag '</head>', style
+          page.append_to_tag '</head>', jquery
+          page.append_to_tag '</head>', javascript
+          # Prepare for Reshow bar
+          @store.transaction(true) do |store|
+            page.body = "<div id=\"__reshow_bodies__\">\n</div>"
+            store[path].reverse.each do |p|
+              page.prepend_to_tag '<div id="__reshow_bodies__">', Page.tag(:div, p.body, :class => '__reshow_body__')
+            end
+            versions = store[path].count
+            # Insert Reshow Bar
+            page.append_to_tag '</body>', toolbar(versions)
+            # Insert versioned stylesheets
+            versions.times do |v|
+              escaped_path = Rack::Utils.escape(path)
+              href = "/__reshow__/assets?path=#{escaped_path}&version=#{v}"
+              page.append_to_tag '</head>', "<link charset='utf-8' href='#{href}' rel='stylesheet' type='text/css'>"
+            end
+          end
+          headers['Content-Length'] = page.to_s.length.to_s
+          body = [page.to_s]
         end
       end
       [status, headers, body]
@@ -60,30 +168,6 @@ module Rack
     end
 
     private
-
-    def prepend_to_tag(tag, page, string)
-      page.sub! /#{tag}/, "#{tag}\n" + string
-    end
-    
-    def append_to_tag(tag, page, string)
-      page.sub! /#{tag}/, string + "\n#{tag}"
-    end
-
-    def insert_reshow_bar(page, versions)
-      append_to_tag '</head>', page, style
-      append_to_tag '</head>', page, jquery
-      append_to_tag '</head>', page, javascript
-      append_to_tag '</body>', page, toolbar(versions)  
-    end
-
-    def tag(type, body, options={})
-      options = options.map {|key, value| "#{key}=\"#{value}\""}.join(' ')
-      <<-EOF
-      <#{type} #{options}">
-        #{body}
-      </#{type}>
-      EOF
-    end
 
     def toolbar(versions)
       versions = (versions < 10 ? '0' : '') + versions.to_s
