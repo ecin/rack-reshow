@@ -17,7 +17,7 @@ describe Rack::Reshow do
     @css = File.open(@root + '/public/v1.css').read
     @css2 = File.open(@root + '/public/v2.css').read
     app = lambda {|env| [200, {}, @body]}
-    @app = Rack::Static.new(app, :urls => ["/public"], :@root => @root)
+    @app = Rack::Static.new(app, :urls => ["/public"], :root => @root)
   end
 
   # Rack::Reshow middleware can be instantiated
