@@ -4,11 +4,10 @@ require 'open-uri'
 
 module Rack
   class Reshow
+    
+    class Page   
 
-    class Page 
-      
       class << self
-
         def tag(type, content, options={})
           options = options.map {|key, value| "#{key}=\"#{value}\""}.join(' ')
           <<-EOF
@@ -17,7 +16,6 @@ module Rack
           </#{type}>
           EOF
         end
-        
       end
       
       def initialize(html, path, app)
@@ -53,9 +51,9 @@ module Rack
       def stylesheets!(app)
         @stylesheets ||= begin
           @stylesheets = {}
-          links = head.scan(/<link.*?rel=['|"]stylesheet['|"].*?>/)
+          links = head.scan(/<link.*?rel=['|"]+stylesheet['|"]+.*?>/)
           links.each do |link|
-            href = link.scan(/href=['|"](.*?)['|"]/).flatten.first
+            href = link.scan(/href=['|"]+(.*?)['|"]+/).flatten.first
             if href[/https?:\/\//] 
               @stylesheets[href] = open(href).read
             else
@@ -113,48 +111,37 @@ module Rack
     
     def call( env )
       request = Request.new(env)
-      if request.env["PATH_INFO"] =~ /__reshow__\/assets/
-        version = request.params['version'].to_i
-        stylesheets = ''
-        @store.transaction(true) do |store|
-          stylesheets = store[request.params['path']][version].stylesheets
-        end
-        return [200, {'Content-Length' => stylesheets.length.to_s, 'Content-Type' => 'text/css'}, [stylesheets]]
-      end
+      path = request.path
+      return serve_stylesheet(request) if path =~ /__reshow__\/assets/
       status, headers, body = @app.call(env)
-      if request.get? and status == 200
-        path = request.path
-        if body.respond_to? :join
-          body = body.join
-          page = Page.new body, path, @app
-          # Store response
-          @store.transaction do |store|
-            store[path] ||= []
-            store[path] << page unless body.nil? or store[path].last.eql?(page)
-          end
-          # Insert Reshow assets
-          page.append_to_tag '</head>', style
-          page.append_to_tag '</head>', jquery
-          page.append_to_tag '</head>', javascript
-          # Prepare for Reshow bar
-          @store.transaction(true) do |store|
-            page.body = "<div id=\"__reshow_bodies__\">\n</div>"
-            store[path].reverse.each do |p|
-              page.prepend_to_tag '<div id="__reshow_bodies__">', Page.tag(:div, p.body, :class => '__reshow_body__')
-            end
-            versions = store[path].count
-            # Insert Reshow Bar
-            page.append_to_tag '</body>', toolbar(versions)
-            # Insert versioned stylesheets
-            versions.times do |v|
-              escaped_path = Rack::Utils.escape(path)
-              href = "/__reshow__/assets?path=#{escaped_path}&version=#{v}"
-              page.append_to_tag '</head>', "<link charset='utf-8' href='#{href}' rel='stylesheet' type='text/css'>"
-            end
-          end
-          headers['Content-Length'] = page.to_s.length.to_s
-          body = [page.to_s]
+      if status == 200 and body.respond_to? :join
+        body = body.join
+        page = Page.new body, path, @app
+        # Store response
+        @store.transaction do |store|
+          store[path] ||= []
+          store[path] << page unless body.nil? or store[path].last.eql?(page)
         end
+        # Insert Reshow assets
+        page.append_to_tag '</head>', [style, javascript].join("\n")
+        # Prepare for Reshow bar
+        @store.transaction(true) do |store|
+          page.body = %q{<div id="__reshow_bodies__"></div>}
+          store[path].reverse.each do |p|
+            page.prepend_to_tag '<div id="__reshow_bodies__">', Page.tag(:div, p.body, :class => '__reshow_body__')
+          end
+          versions = store[path].count
+          # Insert Reshow Bar
+          page.append_to_tag '</body>', toolbar(versions)
+          # Insert versioned stylesheets
+          versions.times do |v|
+            escaped_path = Rack::Utils.escape(path)
+            href = "/__reshow__/assets?path=#{escaped_path}&version=#{v}"
+            page.append_to_tag '</head>', "<link charset='utf-8' href='#{href}' rel='stylesheet' type='text/css'>"
+          end
+        end
+        headers['Content-Length'] = page.length
+        body = [page.to_s]
       end
       [status, headers, body]
     end
@@ -168,6 +155,15 @@ module Rack
     end
 
     private
+
+    def serve_stylesheet(request)
+      version = request.params['version'].to_i
+      stylesheets = ''
+      @store.transaction(true) do |store|
+        stylesheets = store[request.params['path']][version].stylesheets
+      end
+      [200, {'Content-Length' => stylesheets.length.to_s, 'Content-Type' => 'text/css'}, [stylesheets]]
+    end
 
     def toolbar(versions)
       versions = (versions < 10 ? '0' : '') + versions.to_s
@@ -188,12 +184,10 @@ module Rack
     end
 
     def javascript
-      %q{<script src="/__reshow__/reshow.js"></script>}
+      <<-EOF
+      <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+      <script src="/__reshow__/reshow.js"></script>
+      EOF
     end
-
-    def jquery
-      %q{<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>}
-    end
-    
   end
 end
