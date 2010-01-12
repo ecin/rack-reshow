@@ -1,0 +1,143 @@
+*{
+  padding: 0;
+  margin: 0;
+  font-family: helvetica, arial, sans-serif;
+  color: #111;
+}
+
+body{
+  min-height: 100%;
+  min-width: 800px;
+}
+
+a{
+  text-decoration: none;
+}
+
+a:hover{
+  color: #027dff;
+}
+
+a:visited{
+  text-decoration: line-through;
+}
+
+img{
+  border: 0;
+}
+
+#logo{
+  background: url(/img/logo.png);
+  height: 94px;
+  width: 411px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  margin: 0 0 40px 20px;
+}
+
+#logo:hover{
+  background: url(/img/logo_color.png);
+}
+
+#are{
+  float: left;
+  width: 449px;
+}
+
+.is{
+  float: left;
+  width: 200px;
+  padding: 20px 0px 0 20px;
+  cursor: pointer;
+}
+
+.who{
+  font-weight: bold;
+  font-size: 25px;
+  color: #ccc;
+}
+
+.name{
+  display: inline;
+  color: #ccc;
+}
+
+.what{
+  font-size: 20px;
+  color: #ddd;
+}
+
+.is:hover .name{
+  color: #8fd92a;
+}
+
+.is:hover .what{
+  color: #111;
+}
+
+.bacon{
+  position: absolute;
+  top: 110px;
+}
+
+.twitter{
+  height: 82px;
+  width: 100px;
+  background: url(/img/twitter.png);
+}
+
+.twitter:hover{
+  background: url(/img/twitter_color.png);
+}
+
+.github{
+  height: 60px;
+  width: 123px;
+  background: url(/img/github.png);
+  opacity: 0.5;
+}
+
+.github:hover{
+  opacity: 1;
+}
+
+.flickr{
+  height: 35px;
+  width: 130px;
+  background: url(/img/flickr.png);
+}
+
+.flickr:hover{
+  background: url(/img/flickr_color.png);
+}
+
+#rofls{
+  margin-left: 449px;
+}
+
+.rofl{
+  cursor: pointer;
+  position: relative;
+  padding: 5px 0 5px 10px;
+  border-left: 10px solid #fafafa;
+}
+
+.rofl:nth-child(even){
+  background: #fafafa;
+}
+
+.rofl_title{
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.rofl:hover .rofl_date{
+  color: #027dff;
+}
+
+.rofl_date{
+  color: #ccc;
+  font-size: 32px;
+  display: inline;
+}
