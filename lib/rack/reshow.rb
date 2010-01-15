@@ -140,7 +140,7 @@ module Rack
             page.append_to_tag '</head>', "<link charset='utf-8' href='#{href}' rel='stylesheet' type='text/css'>"
           end
         end
-        headers['Content-Length'] = page.length
+        headers['Content-Length'] = page.length.to_s
         body = [page.to_s]
       end
       [status, headers, body]
