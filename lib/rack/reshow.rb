@@ -116,32 +116,34 @@ module Rack
       status, headers, body = @app.call(env)
       if status == 200 and body.respond_to? :join
         body = body.join
-        page = Page.new body, path, @app
-        # Store response
-        @store.transaction do |store|
-          store[path] ||= []
-          store[path] << page unless body.nil? or store[path].last.eql?(page)
-        end
-        # Insert Reshow assets
-        page.append_to_tag '</head>', [style, javascript].join("\n")
-        # Prepare for Reshow bar
-        @store.transaction(true) do |store|
-          page.body = %q{<div id="__reshow_bodies__"></div>}
-          store[path].reverse.each do |p|
-            page.prepend_to_tag '<div id="__reshow_bodies__">', Page.tag(:div, p.body, :class => '__reshow_body__')
+        if body[/<head>.*?<\/head>/] and body[/<body>.*?<\/body>/]
+          page = Page.new body, path, @app
+          # Store response
+          @store.transaction do |store|
+            store[path] ||= []
+            store[path] << page unless body.nil? or store[path].last.eql?(page)
           end
-          versions = store[path].count
-          # Insert Reshow Bar
-          page.append_to_tag '</body>', toolbar(versions)
-          # Insert versioned stylesheets
-          versions.times do |v|
-            escaped_path = Rack::Utils.escape(path)
-            href = "/__reshow__/assets?path=#{escaped_path}&version=#{v}"
-            page.append_to_tag '</head>', "<link charset='utf-8' href='#{href}' rel='stylesheet' type='text/css'>"
+          # Insert Reshow assets
+          page.append_to_tag '</head>', [style, javascript].join("\n")
+          # Prepare for Reshow bar
+          @store.transaction(true) do |store|
+            page.body = %q{<div id="__reshow_bodies__"></div>}
+            store[path].reverse.each do |p|
+              page.prepend_to_tag '<div id="__reshow_bodies__">', Page.tag(:div, p.body, :class => '__reshow_body__')
+            end
+            versions = store[path].count
+            # Insert Reshow Bar
+            page.append_to_tag '</body>', toolbar(versions)
+            # Insert versioned stylesheets
+            versions.times do |v|
+              escaped_path = Rack::Utils.escape(path)
+              href = "/__reshow__/assets?path=#{escaped_path}&version=#{v}"
+              page.append_to_tag '</head>', "<link charset='utf-8' href='#{href}' rel='stylesheet' type='text/css'>"
+            end
           end
+          headers['Content-Length'] = page.length.to_s
+          body = [page.to_s]
         end
-        headers['Content-Length'] = page.length.to_s
-        body = [page.to_s]
       end
       [status, headers, body]
     end
